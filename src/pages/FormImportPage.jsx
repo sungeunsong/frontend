@@ -1,52 +1,37 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const FormImportPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const templateId = searchParams.get('templateId');
+  const { user } = useAuth();
   
-  // 기본 예시 JSON
-  const defaultJson = JSON.stringify({
-    title: "노트북 구매 요청",
-    requester_id: "550e8400-e29b-41d4-a716-446655440000",
-    form_data: {
-      items: [
-        { name: "MacBook Pro", price: 3500000 },
-        { name: "Magic Mouse", price: 100000 }
-      ],
-      reason: "개발 업무용 장비 교체 필요",
-      department: "IT Dev Team"
-    },
-    flow_process: {
-      steps: [
-        {
-          seq: 1,
-          name: "팀장 승인",
-          approver_id: "550e8400-e29b-41d4-a716-446655440001",
-          status: "pending",
-          timestamp: null
-        },
-        {
-          seq: 2,
-          name: "CTO 승인",
-          approver_id: "550e8400-e29b-41d4-a716-446655440002",
-          status: "pending",
-          timestamp: null
-        }
-      ],
-      current_step: 1
-    }
-  }, null, 2);
-
-  const [jsonInput, setJsonInput] = useState(defaultJson);
+  const [jsonInput, setJsonInput] = useState("");
   const [formData, setFormData] = useState({});
   const [formFields, setFormFields] = useState([]);
   const [templateName, setTemplateName] = useState("");
   const [workflowSnapshot, setWorkflowSnapshot] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [managerInfo, setManagerInfo] = useState(null);
 
+  // Fetch Manager Info on Load
+  useEffect(() => {
+    if (user?.id) {
+        fetch(`/api/org/my-manager/${user.id}`)
+            .then(res => {
+                if(res.ok) return res.json();
+                console.warn("No manager found for user");
+                return null;
+            })
+            .then(data => setManagerInfo(data))
+            .catch(err => console.error("Failed to fetch manager", err));
+    }
+  }, [user]);
+
+  // Load Template
   useEffect(() => {
     if (templateId) {
         setLoading(true);
@@ -65,13 +50,8 @@ const FormImportPage = () => {
                     });
                     setFormData(initialData);
                 } else {
-                    // Fallback to JSON mode if no schema fields
                     setFormFields([]);
                 }
-
-                // Still populate JSON input for debug/fallback or legacy logic
-                // ... (existing logic for newJson could be kept or synced)
-                
                 setLoading(false);
             })
             .catch(err => {
@@ -97,16 +77,28 @@ const FormImportPage = () => {
       let payload;
 
       if (templateId && formFields.length > 0) {
-          // Construct payload from Visual Form Data
+          // Clone workflow to modify it
+          let finalWorkflow = JSON.parse(JSON.stringify(workflowSnapshot));
+          
+          // Auto-assign Manager to Step 1 (MVP Logic)
+          // If we have manager info, and the first step is pending, assign it.
+          if (managerInfo && finalWorkflow.steps.length > 0) {
+              // Assume Step 1 is Manager Approval for now.
+              // In future, check step role requirements.
+              finalWorkflow.steps[0].approver_id = managerInfo.manager_id;
+          }
+
           payload = {
-              title: `${templateName} - ${new Date().toLocaleDateString()}`,
-              requester_id: "550e8400-e29b-41d4-a716-446655440000", // Default requester
-              form_data: formData, // The actual data from inputs
-              flow_process: workflowSnapshot
+              title: `${templateName} - ${user?.full_name} (${new Date().toLocaleDateString()})`,
+              requester_id: user?.id || "anonymous", 
+              form_data: formData,
+              flow_process: finalWorkflow 
           };
       } else {
           // Use Raw JSON Input
-          payload = JSON.parse(jsonInput);
+          payload = JSON.parse(jsonInput || "{}");
+          // Overwrite requester if authenticated
+          if (user?.id) payload.requester_id = user.id;
       }
       
       const response = await fetch('/api/approvals', {
