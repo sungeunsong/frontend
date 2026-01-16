@@ -10,24 +10,33 @@ const ApprovalDetailPage = () => {
     
     const [processing, setProcessing] = useState(false);
 
+    const [logs, setLogs] = useState([]);
+    
     useEffect(() => {
-        fetchApproval();
+        fetchData();
     }, [id]);
 
-    const fetchApproval = () => {
-        fetch(`/api/approvals/${id}`)
-            .then((res) => {
-                if (!res.ok) throw new Error("Approval not found");
-                return res.json();
-            })
-            .then((data) => {
-                setApproval(data);
-                setLoading(false);
-            })
-            .catch((err) => {
-                console.error('Failed to fetch approval:', err);
-                setLoading(false);
-            });
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            const [approvalRes, logsRes] = await Promise.all([
+                fetch(`/api/approvals/${id}`),
+                fetch(`/api/approvals/${id}/logs`)
+            ]);
+
+            if (!approvalRes.ok) throw new Error("Approval not found");
+            const approvalData = await approvalRes.json();
+            setApproval(approvalData);
+
+            if (logsRes.ok) {
+                setLogs(await logsRes.json());
+            }
+
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleAction = async (action) => {
@@ -47,15 +56,13 @@ const ApprovalDetailPage = () => {
 
             const response = await fetch(`/api/approvals/${id}/${action}`, {
                 method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: body
             });
 
             if (response.ok) {
                 alert(`Successfully ${action}ed!`);
-                fetchApproval();
+                fetchData();
             } else {
                 const errMsg = await response.text();
                 alert(`Failed to ${action}: ${errMsg}`);
@@ -68,14 +75,37 @@ const ApprovalDetailPage = () => {
         }
     };
 
+    const handlePostComment = async () => {
+        if (!comment.trim()) return;
+        setProcessing(true);
+        try {
+            const response = await fetch(`/api/approvals/${id}/comments`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: comment })
+            });
+            if (response.ok) {
+                setComment("");
+                fetchData(); // Refresh logs
+            } else {
+                alert("Failed to post comment");
+            }
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setProcessing(false);
+        }
+    };
+
     if (loading) return <div className="loading">Loading details...</div>;
     if (!approval) return <div className="error">Approval request not found.</div>;
 
     const { flow_process } = approval;
-    const currentStepIndex = flow_process.current_step - 1; // 1-based to 0-based
+    const currentStepIndex = flow_process.current_step - 1; 
 
     // Helper to format generic form data keys
     const formatKey = (key) => key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    const formatDate = (dateStr) => new Date(dateStr).toLocaleString();
 
     return (
         <div className="page-container">
@@ -98,7 +128,6 @@ const ApprovalDetailPage = () => {
                 <div className="detail-section">
                     <div className="card">
                         <h2>Request Data</h2>
-                        {/* Generic Form Data Renderer */}
                         <div className="info-grid" style={{ gridTemplateColumns: '1fr' }}>
                             {approval.form_data && typeof approval.form_data === 'object' ? (
                                 Object.entries(approval.form_data).map(([key, value]) => (
@@ -118,6 +147,48 @@ const ApprovalDetailPage = () => {
                             ) : (
                                 <p className="text-muted">No form data available.</p>
                             )}
+                        </div>
+                    </div>
+
+                    {/* Activity Log Section */}
+                    <div className="card" style={{ marginTop: '20px' }}>
+                        <h2>Activity Log</h2>
+                        <div className="activity-log">
+                            {logs.length === 0 && <p className="text-muted">No activity yet.</p>}
+                            {logs.map((log) => (
+                                <div key={log.id} className="log-item" style={{ 
+                                    padding: '12px 0', 
+                                    borderBottom: '1px solid var(--border-subtle)',
+                                    display: 'flex', gap: '12px'
+                                }}>
+                                    <div className="log-icon" style={{ 
+                                        width: '32px', height: '32px', borderRadius: '50%', 
+                                        background: log.action_type === 'APPROVED' ? 'var(--status-approved-text)' : 
+                                                    log.action_type === 'REJECTED' ? 'var(--status-rejected-text)' : 'var(--bg-surface)',
+                                        color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        fontSize: '0.8rem'
+                                    }}>
+                                        {log.action_type[0]}
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                            <span style={{ fontWeight: '600' }}>
+                                                {log.action_type}
+                                                {log.action_type === 'COMMENT' && 'ED'}
+                                            </span>
+                                            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                                                {formatDate(log.created_at)}
+                                            </span>
+                                        </div>
+                                        <div style={{ fontSize: '0.9rem', marginTop: '4px' }}>
+                                            {log.content || (log.action_type === 'CREATED' ? 'Request created' : '')}
+                                        </div>
+                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                                            By: {log.actor_id}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </div>
@@ -167,20 +238,34 @@ const ApprovalDetailPage = () => {
                 </div>
             </div>
 
-            {/* Action Footer (Only if pending) */}
-            {approval.status === 'pending' && (
-                <div className="action-footer">
-                    <div className="page-container action-btns">
-                        <div style={{ flex: 1 }}>
-                            {/* Comment Input Placeholder */}
-                            <input 
-                                type="text" 
-                                placeholder="Add a comment (optional)..." 
-                                value={comment}
-                                onChange={(e) => setComment(e.target.value)}
-                                style={{ width: '100%' }}
-                            />
-                        </div>
+            {/* Action Footer */}
+            {/* Always show footer to allow comments even if closed? For now only if pending for actions. 
+               But comments should be allowed always? Let's keep it restricted to pending for MVP simplicity or allow always.
+               Let's allow comments always, but actions only if pending.
+            */}
+            <div className="action-footer">
+                <div className="page-container action-btns">
+                    <div style={{ flex: 1, display: 'flex', gap: '8px' }}>
+                        <input 
+                            type="text" 
+                            placeholder="Add a comment..." 
+                            value={comment}
+                            onChange={(e) => setComment(e.target.value)}
+                            style={{ flex: 1 }}
+                        />
+                         <button 
+                            className="btn" 
+                            style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}
+                            onClick={handlePostComment}
+                            disabled={processing || !comment.trim()}
+                        >
+                            Comment
+                        </button>
+                    </div>
+                   
+                   {approval.status === 'pending' && (
+                       <>
+                        <div style={{ width: '1px', background: 'var(--border-subtle)', margin: '0 10px' }}></div>
                         <button 
                             className="btn btn-reject" 
                             onClick={() => handleAction('reject')}
@@ -195,11 +280,14 @@ const ApprovalDetailPage = () => {
                         >
                             Approve
                         </button>
-                    </div>
+                       </>
+                   )}
                 </div>
-            )}
+            </div>
         </div>
     );
 };
 
 export default ApprovalDetailPage;
+
+
