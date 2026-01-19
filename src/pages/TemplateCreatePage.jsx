@@ -226,6 +226,7 @@ const TemplateCreatePage = () => {
                                             <button className="btn-primary" onClick={() => addField('text')}>+ Text Field</button>
                                             <button className="btn-primary" onClick={() => addField('number')}>+ Number Field</button>
                                             <button className="btn-primary" onClick={() => addField('date')}>+ Date Field</button>
+                                            <button className="btn-primary" style={{ background: '#ca8a04', border: '1px solid #a16207' }} onClick={() => addField('html')}>+ HTML Block</button>
                                         </div>
 
                                         <div className="builder-fields" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -237,32 +238,63 @@ const TemplateCreatePage = () => {
                                                     borderRadius: '8px',
                                                     display: 'flex',
                                                     gap: '1rem',
-                                                    alignItems: 'center'
+                                                    alignItems: 'flex-start'
                                                 }}>
                                                     <div style={{ padding: '4px 8px', background: 'var(--bg-surface)', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 'bold' }}>
                                                         {field.type.toUpperCase()}
                                                     </div>
-                                                    <div style={{ flex: 1, display: 'flex', gap: '1rem' }}>
-                                                        <div style={{ flex: 1 }}>
-                                                            <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Label</label>
-                                                            <input 
-                                                                type="text" 
-                                                                value={field.label} 
-                                                                onChange={(e) => updateField(index, 'label', e.target.value)}
-                                                            />
+                                                    
+                                                    {field.type === 'html' ? (
+                                                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                            <div style={{ display: 'flex', gap: '1rem' }}>
+                                                                <div style={{ flex: 1 }}>
+                                                                    <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Block ID</label>
+                                                                    <input 
+                                                                        type="text" 
+                                                                        value={field.id} 
+                                                                        onChange={(e) => updateField(index, 'id', e.target.value)}
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                            <div>
+                                                                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>HTML Content</label>
+                                                                <textarea 
+                                                                    className="input-field"
+                                                                    rows={3}
+                                                                    style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}
+                                                                    value={field.content || ''}
+                                                                    onChange={(e) => updateField(index, 'content', e.target.value)}
+                                                                    placeholder="<div>Enter HTML here...</div>"
+                                                                />
+                                                            </div>
+                                                            <div style={{ padding: '8px', background: '#000', borderRadius: '4px', fontSize: '0.8rem', color: '#888' }}>
+                                                                Preview: <div dangerouslySetInnerHTML={{ __html: field.content }} />
+                                                            </div>
                                                         </div>
-                                                        <div style={{ flex: 1 }}>
-                                                            <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Field ID</label>
-                                                            <input 
-                                                                type="text" 
-                                                                value={field.id} 
-                                                                onChange={(e) => updateField(index, 'id', e.target.value)}
-                                                            />
+                                                    ) : (
+                                                        <div style={{ flex: 1, display: 'flex', gap: '1rem' }}>
+                                                            <div style={{ flex: 1 }}>
+                                                                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Label</label>
+                                                                <input 
+                                                                    type="text" 
+                                                                    value={field.label} 
+                                                                    onChange={(e) => updateField(index, 'label', e.target.value)}
+                                                                />
+                                                            </div>
+                                                            <div style={{ flex: 1 }}>
+                                                                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Field ID</label>
+                                                                <input 
+                                                                    type="text" 
+                                                                    value={field.id} 
+                                                                    onChange={(e) => updateField(index, 'id', e.target.value)}
+                                                                />
+                                                            </div>
                                                         </div>
-                                                    </div>
+                                                    )}
+
                                                     <button 
                                                         onClick={() => removeField(index)}
-                                                        style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: '8px' }}
+                                                        style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: '8px', alignSelf: 'center' }}
                                                     >
                                                         ✕
                                                     </button>
@@ -271,6 +303,7 @@ const TemplateCreatePage = () => {
                                             {builderFields.length === 0 && <div style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>No fields added.</div>}
                                         </div>
                                     </div>
+
                                 )}
                             </div>
                         )}

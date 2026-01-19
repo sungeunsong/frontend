@@ -196,26 +196,38 @@ const RequestPage = () => {
             );
         }
 
-        return templateSchema.fields.map(field => (
-            <div className="form-group" key={field.id}>
-                <label>{field.label}</label>
-                {field.type === 'textarea' ? (
-                    <textarea
-                        className="input-field"
-                        rows={3}
-                        value={formData[field.id] || ''}
-                        onChange={e => handleFormChange(field.id, e.target.value)}
+        return templateSchema.fields.map(field => {
+            if (field.type === 'html') {
+                return (
+                    <div key={field.id} 
+                         className="form-group"
+                         style={{ marginBottom: '1.5rem' }} 
+                         dangerouslySetInnerHTML={{ __html: field.content || field.defaultValue }} 
                     />
-                ) : (
-                    <input 
-                        type={field.type || 'text'}
-                        className="input-field"
-                        value={formData[field.id] || ''}
-                        onChange={e => handleFormChange(field.id, e.target.value)}
-                    />
-                )}
-            </div>
-        ));
+                );
+            }
+            
+            return (
+                <div className="form-group" key={field.id}>
+                    <label>{field.label}</label>
+                    {field.type === 'textarea' ? (
+                        <textarea
+                            className="input-field"
+                            rows={3}
+                            value={formData[field.id] || ''}
+                            onChange={e => handleFormChange(field.id, e.target.value)}
+                        />
+                    ) : (
+                        <input 
+                            type={field.type || 'text'}
+                            className="input-field"
+                            value={formData[field.id] || ''}
+                            onChange={e => handleFormChange(field.id, e.target.value)}
+                        />
+                    )}
+                </div>
+            );
+        });
     };
 
     return (
