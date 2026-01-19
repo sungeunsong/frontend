@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { approvalApi } from '../api/approvalApi';
 
 const InboxPage = () => {
     const [approvals, setApprovals] = useState([]);
@@ -8,8 +9,7 @@ const InboxPage = () => {
     const navigate = useNavigate();
 
     useEffect(() => {
-        fetch('/api/approvals')
-            .then((res) => res.json())
+        approvalApi.getApprovals()
             .then((data) => {
                 setApprovals(data);
                 setLoading(false);

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import api from '../api/axiosConfig';
 
 const ApprovalDetailPage = () => {
     const { id } = useParams();
@@ -20,17 +21,12 @@ const ApprovalDetailPage = () => {
         setLoading(true);
         try {
             const [approvalRes, logsRes] = await Promise.all([
-                fetch(`/api/approvals/${id}`),
-                fetch(`/api/approvals/${id}/logs`)
+                api.get(`/approvals/${id}`),
+                api.get(`/approvals/${id}/logs`)
             ]);
 
-            if (!approvalRes.ok) throw new Error("Approval not found");
-            const approvalData = await approvalRes.json();
-            setApproval(approvalData);
-
-            if (logsRes.ok) {
-                setLogs(await logsRes.json());
-            }
+            setApproval(approvalRes.data);
+            setLogs(logsRes.data);
 
         } catch (err) {
             console.error(err);
@@ -44,29 +40,20 @@ const ApprovalDetailPage = () => {
         
         setProcessing(true);
         try {
-            let body = null;
+            let body = {};
             if (action === 'reject') {
                 const reason = prompt("Enter rejection reason:");
                 if (!reason) {
                     setProcessing(false);
                     return;
                 }
-                body = JSON.stringify({ reason });
+                body = { reason };
             }
 
-            const response = await fetch(`/api/approvals/${id}/${action}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: body
-            });
-
-            if (response.ok) {
-                alert(`Successfully ${action}ed!`);
-                fetchData();
-            } else {
-                const errMsg = await response.text();
-                alert(`Failed to ${action}: ${errMsg}`);
-            }
+            await api.post(`/approvals/${id}/${action}`, body);
+            
+            alert(`Successfully ${action}ed!`);
+            fetchData();
         } catch (e) {
             console.error(e);
             alert(`Error processing request`);
@@ -79,19 +66,12 @@ const ApprovalDetailPage = () => {
         if (!comment.trim()) return;
         setProcessing(true);
         try {
-            const response = await fetch(`/api/approvals/${id}/comments`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content: comment })
-            });
-            if (response.ok) {
-                setComment("");
-                fetchData(); // Refresh logs
-            } else {
-                alert("Failed to post comment");
-            }
+            await api.post(`/approvals/${id}/comments`, { content: comment });
+            setComment("");
+            fetchData(); // Refresh logs
         } catch (e) {
             console.error(e);
+            alert("Failed to post comment");
         } finally {
             setProcessing(false);
         }

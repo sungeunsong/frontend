@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import api from '../api/axiosConfig';
 
 const TemplateCreatePage = () => {
     const navigate = useNavigate();
@@ -8,7 +9,7 @@ const TemplateCreatePage = () => {
     const [activeTab, setActiveTab] = useState('form'); // 'form' or 'workflow'
     const [editorMode, setEditorMode] = useState('visual'); // 'visual' or 'json'
     const [loading, setLoading] = useState(false);
-    
+
     // Default JSON Schemas
     const defaultFormSchema = JSON.stringify({
         title: "Default Form Title",
@@ -133,18 +134,9 @@ const TemplateCreatePage = () => {
                 workflow_snapshot: parsedWorkflow
             };
 
-            const response = await fetch('/api/templates', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            if (!response.ok) {
-                throw new Error(`Server error: ${response.status}`);
-            }
+            await api.post('/templates', payload);
 
             navigate('/templates');
-
         } catch (err) {
             console.error(err);
             alert(`Failed to create template: ${err.message}`);

@@ -1,16 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import api from '../api/axiosConfig';
+
 const TemplateListPage = () => {
     const [templates, setTemplates] = useState([]);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
     useEffect(() => {
-        fetch('/api/templates')
-            .then((res) => res.json())
-            .then((data) => {
-                setTemplates(data);
+        api.get('/templates')
+            .then((res) => {
+                setTemplates(res.data);
                 setLoading(false);
             })
             .catch((err) => {

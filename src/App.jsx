@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import InboxPage from './pages/InboxPage';
 import ApprovalDetailPage from './pages/ApprovalDetailPage';
-import FormImportPage from './pages/FormImportPage';
+import RequestPage from './pages/RequestPage';
 import TemplateListPage from './pages/TemplateListPage';
 import TemplateCreatePage from './pages/TemplateCreatePage';
 import LoginPage from './pages/LoginPage';
@@ -82,7 +82,7 @@ function App() {
                         <Layout>
                             <Routes>
                                 <Route path="/" element={<InboxPage />} />
-                                <Route path="/new" element={<FormImportPage />} />
+                                <Route path="/new" element={<RequestPage />} />
                                 <Route path="/approvals/:id" element={<ApprovalDetailPage />} />
                                 <Route path="/templates" element={<TemplateListPage />} />
                                 <Route path="/templates/new" element={<TemplateCreatePage />} />
